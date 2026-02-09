@@ -1,0 +1,6 @@
+fastapi>=0.95.0
+uvicorn>=0.22.0
+requests>=2.31.0
+pydantic>=2.0.0
+azure-kusto-data>=4.0.0
+azure-identity>=1.14.0
