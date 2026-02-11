@@ -164,7 +164,7 @@ def llm_decider(user_input: str) -> ToolDecision:
                     "temperature": 0.0  # Deterministic output
                 }
             },
-            timeout=30
+            timeout=120
         )
 
         data = response.json()

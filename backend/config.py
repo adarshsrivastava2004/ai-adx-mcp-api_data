@@ -13,7 +13,7 @@ if not load_dotenv():
 
 
 # --- MISSING VARIABLE ADDED HERE ---
-MODEL = "qwen2.5:7b-instruct"
+MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:7b")  # 
 # -----------------------------------
 
 # ADX Settings
@@ -32,3 +32,5 @@ OLLAMA_GENERATE_URL = f"{OLLAMA_BASE_URL}/api/generate"
 AZURE_CLIENT_ID = os.getenv("AZURE_CLIENT_ID")
 AZURE_CLIENT_SECRET = os.getenv("AZURE_CLIENT_SECRET")
 AZURE_TENANT_ID = os.getenv("AZURE_TENANT_ID")
+
+

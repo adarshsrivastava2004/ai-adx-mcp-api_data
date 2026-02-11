@@ -46,7 +46,7 @@ User:
                 "prompt": prompt,
                 "stream": False
             },
-            timeout=30
+            timeout=120
         )
 
         return response.json()["response"].strip()

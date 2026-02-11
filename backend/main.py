@@ -70,8 +70,6 @@ async def chat(req: ChatRequest):
     if decision.tool == "out_of_scope":
         return {
             "reply": (
-                "I can help with storm event data questions "
-                "like damage, events, states, and time ranges. "
                 "This question is outside that scope."
             )
         }

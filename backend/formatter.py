@@ -124,7 +124,7 @@ Generate the best possible answer for the user.
                 "prompt": prompt,
                 "stream": False
             },
-            timeout=120
+            timeout=180
         )
         # Safety check for empty response
         if response.status_code != 200:
