@@ -73,9 +73,17 @@ async def chat(req: ChatRequest):
                 "This question is outside that scope."
             )
         }
-
+        
     # -----------------------
-    # PATH C: ADX Database Query (Enterprise Self-Healing)
+    # PATH C:Column Meaning
+    # -----------------------
+    if decision.tool == "column_meaning":
+        return {
+            "reply":decision.query_goal
+            }
+        
+    # -----------------------
+    # PATH D: ADX Database Query (Enterprise Self-Healing)
     # -----------------------
     if decision.tool == "adx":
         # Guard: Check if the Orchestrator failed to extract a goal

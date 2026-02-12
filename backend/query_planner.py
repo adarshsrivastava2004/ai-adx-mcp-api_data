@@ -96,83 +96,124 @@ These functions DO NOT EXIST in KQL. Using them causes a syntax error. They are 
 ## FEW-SHOT EXAMPLES — FOLLOW THESE EXACTLY
 ## ══════════════════════════════════════════
 
-### Example 1 — Count for TODAY (calendar day)
-Q: How many requests did we receive today for operation getcustdemogdetails?
+## ══════════════════════════════════════════
+## FEW-SHOT EXAMPLES — FOLLOW THESE EXACTLY
+## ══════════════════════════════════════════
+
+Example 1 — Aggregation (Operation & Status)
+
+Q: Count requests by operation and status code for the last 24 hours.
 A:
 API_gateway
+| where unixtime_milliseconds_todatetime(messageReceivedTimeStamp) > ago(24h)
 | extend EventTime = unixtime_milliseconds_todatetime(messageReceivedTimeStamp)
-| where EventTime >= startofday(now()) and EventTime < startofday(now()) + 1d
-| where operation =~ "getcustdemogdetails"
-| summarize TotalRequests = count()
+| summarize RequestCount = count() by operation, statusCode
 
 ---
 
-### Example 2 — Rolling time window
-Q: Show all 500 errors in the last 24 hours
+Example 2 — PII Safe Grouping
+
+Q: How many requests did we get per mobile number today?
 A:
 API_gateway
+| where unixtime_milliseconds_todatetime(messageReceivedTimeStamp) >= startofday(now()) and unixtime_milliseconds_todatetime(messageReceivedTimeStamp) < startofday(now()) + 1d
 | extend EventTime = unixtime_milliseconds_todatetime(messageReceivedTimeStamp)
-| where EventTime > ago(24h)
-| where statusCode =~ "500"
-| project EventTime, sourcePOD, operation, statusCode, statusDescription, corRelationId
+| summarize Count = count() by hash(actualmobilno)
+
+---
+
+Example 3 — Operation Search
+
+Q: Find all requests involving "custdemogdetails" from yesterday.
+A:
+API_gateway
+| where unixtime_milliseconds_todatetime(messageReceivedTimeStamp) >= startofday(now()-1d) and unixtime_milliseconds_todatetime(messageReceivedTimeStamp) < startofday(now())
+| extend EventTime = unixtime_milliseconds_todatetime(messageReceivedTimeStamp)
+| where operation has "custdemogdetails"
+| project EventTime, sourcePOD, operation, statusCode, corRelationId
 | take 10000
 
 ---
 
-### Example 3 — Error rate by POD
-Q: What is the error rate by POD for the last 7 days?
+Example 4 — Latency Casting
+
+Q: What is the average latency by source POD for the last hour?
 A:
 API_gateway
+| where unixtime_milliseconds_todatetime(messageReceivedTimeStamp) > ago(1h)
 | extend EventTime = unixtime_milliseconds_todatetime(messageReceivedTimeStamp)
-| where EventTime > ago(7d)
-| summarize Total = count(), Errors = countif(statusCode != "200") by sourcePOD
-| extend ErrorRate = round(100.0 * Errors / Total, 2)
-| top 20 by ErrorRate desc
-
----
-
-### Example 4 — Latency analysis
-Q: Average and P95 latency per operation last 7 days
-A:
-API_gateway
-| extend EventTime = unixtime_milliseconds_todatetime(messageReceivedTimeStamp)
-| where EventTime > ago(7d)
 | extend Latency = tolong(externalServiceLatency)
-| where isnotnull(Latency) and Latency > 0
-| summarize AvgLatency = avg(Latency), P95Latency = percentile(Latency, 95) by operation
-| top 20 by AvgLatency desc
+| where isnotnull(Latency)
+| summarize AvgLatency = avg(Latency) by sourcePOD
+---
+
+Example 5 — Error Filtering
+
+Q: Show Kafka put timestamp for 500 errors in last 30 minutes.
+A:
+API_gateway
+| where unixtime_milliseconds_todatetime(messageReceivedTimeStamp) > ago(30m)
+| extend EventTime = unixtime_milliseconds_todatetime(messageReceivedTimeStamp)
+| where statusCode =~ "500"
+| extend KafkaPutTime = unixtime_milliseconds_todatetime(messagePutIntoKafakTimeStamp)
+| project EventTime, KafkaPutTime, operation, corRelationId
+| take 10000
 
 ---
 
-### Example 5 — Time-series trend
-Q: Show request volume per hour today
+Example 6 — Distinct Count
+
+Q: Count unique customer IDs for the "login" operation today.
 A:
 API_gateway
+| where unixtime_milliseconds_todatetime(messageReceivedTimeStamp) >= startofday(now()) and unixtime_milliseconds_todatetime(messageReceivedTimeStamp) < startofday(now()) + 1d
 | extend EventTime = unixtime_milliseconds_todatetime(messageReceivedTimeStamp)
-| where EventTime >= startofday(now()) and EventTime < startofday(now()) + 1d
+| where operation =~ "login"
+| summarize UniqueCustomers = dcount(actualcustomerids)
+
+---
+
+Example 7 — Time Series
+
+Q: Plot request count per hour for last 7 days.
+A:
+API_gateway
+| where unixtime_milliseconds_todatetime(messageReceivedTimeStamp) > ago(7d)
+| extend EventTime = unixtime_milliseconds_todatetime(messageReceivedTimeStamp)
 | summarize RequestCount = count() by bin(EventTime, 1h)
 | render timechart
 
 ---
 
-### Example 6 — Distinct count
-Q: How many unique customers made requests today?
+Example 8 — Ingestion Time Filter
+
+Q: Show requests ingested in the last 24 hours for "custdemogdetails".
 A:
 API_gateway
-| extend EventTime = unixtime_milliseconds_todatetime(messageReceivedTimeStamp)
-| where EventTime >= startofday(now()) and EventTime < startofday(now()) + 1d
-| summarize UniqueCustomers = dcount(actualcustomerids)
+| where ingestion_time() > ago(1d)
+| where operation has "custdemogdetails"
 
 ---
 
-### Example 7 — Multi-value filter
-Q: Show requests for operations login or logout in last hour
+Example 9 — Ingestion Aggregation
+
+Q: Count records ingested in last 6 hours by status code.
 A:
 API_gateway
+| where ingestion_time() > ago(6h)
+| summarize count() by statusCode
+
+---
+
+Example 10 — Ingestion Delay
+
+Q: Show ingestion delay for records ingested in last 1 hour.
+A:
+API_gateway
+| where ingestion_time() > ago(1h)
 | extend EventTime = unixtime_milliseconds_todatetime(messageReceivedTimeStamp)
-| where EventTime > ago(1h)
-| where operation in~ ("login", "logout")
-| project EventTime, sourcePOD, operation, statusCode, corRelationId
+| extend IngestionDelay = ingestion_time() - EventTime
+| project EventTime, ingestion_time(), IngestionDelay, operation, statusCode
 | take 10000
 
 

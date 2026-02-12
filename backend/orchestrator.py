@@ -19,7 +19,7 @@ RESPONSE_SCHEMA = {
     "properties": {
         "tool": {
             "type": "string",
-            "enum": ["adx", "chat", "out_of_scope"] # 🔒 Strict restriction on values
+            "enum": ["adx", "chat", "out_of_scope", "column_meaning"] # 🔒 Strict restriction on values
         },
         "query_goal": {
             "type": "string"
@@ -111,6 +111,11 @@ TOOL DEFINITIONS:
    - Trigger: Questions not related to tables listed above data.
    - Query Goal: MUST be "" (empty string).
 
+
+4. "column_meaning"
+   - Trigger: Questions asking "What is [Column]?", "Explain [Column]", or "What does [Column] mean?".
+   - Query Goal: WRITE THE EXPLANATION. Look at the "Description / Mapping Logic" and "Type" in the Schema Table above. Write a clear explanation of what that column represents, including its data type and any known values.
+
 --------------------------------------------------
 FEW-SHOT EXAMPLES (Observe the translation to technical specs):
 
@@ -131,6 +136,13 @@ Output: {
   "tool": "adx",
   "query_goal": "Select all rows from API_gateway. Sort by messageReceivedTimeStamp desc. Limit to 50."
 }
+
+User: "What is apiStatusCode?"
+Output: {
+  "tool": "column_meaning",
+  "query_goal": "Based on the schema, apiStatusCode stores the Internal status code. It is of INTEGER TYPE (unlike statusCode which is string). Common values usually map to HTTP standards (200=Success, 500=Error)."
+}
+
 User: "Hi, are you there?"
 Output: { "tool": "chat", "query_goal": "" }
 
@@ -140,8 +152,8 @@ Output: { "tool": "out_of_scope", "query_goal": "" }
 
 OUTPUT FORMAT (JSON ONLY):
 {
-  "tool": "adx" | "chat" | "out_of_scope",
-  "query_goal": "Technical spec string with columns and logic"
+  "tool": "adx" | "chat" | "out_of_scope" | "column_meaning",
+  "query_goal": "Technical spec string OR Explanation string"
 }
 """
 

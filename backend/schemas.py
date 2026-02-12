@@ -29,14 +29,17 @@ class ToolDecision(BaseModel):
         → Database-related analytical queries
         → query_goal MUST be non-empty
         → Goes through planner → MCP → ADX → formatter
-
+    - column_meaning (NEW)
+        → Questions about specific columns (e.g. "What is apiStatusCode?")
+        → query_goal contains the explanation text
+        
     - out_of_scope
         → Meaningful non-database questions (definitions, explanations, general knowledge)
         → query_goal MUST be empty
         → Response is generated via formatter LLM using (query + JSON)
     """
 
-    tool: Literal["chat", "adx", "out_of_scope"] = Field(
+    tool: Literal["chat", "adx", "out_of_scope", "column_meaning"] = Field(
         ...,
         description="Routing decision selected by the orchestrator"
     )
