@@ -430,7 +430,7 @@ def generate_kql(user_goal: str, retry_count: int = 0, last_error: str = None, l
             },
             timeout=240
         )
-        print(messages)
+        # print(messages)
         elapsed = time.time() - start_time
         logger.info(f"[QueryPlanner] STEP 5 — LLM responded in {elapsed:.2f}s | HTTP status: {response.status_code}")
         
