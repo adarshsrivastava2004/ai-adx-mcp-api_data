@@ -92,6 +92,8 @@ async def chat(req: ChatRequest):
         MAX_RETRIES = 2
         attempt = 0
         last_semantic_error = None
+        last_kql = None
+
         while attempt <= MAX_RETRIES:
             try:
                 # -----------------------
@@ -101,12 +103,12 @@ async def chat(req: ChatRequest):
                 # If attempt > 0 : Uses 'Repair Mode' to fix the 'last_error'.
                 logger.info(f"🔹 [Attempt {attempt}] Generating KQL...")
                 
-                kql = generate_kql(decision.query_goal,retry_count=attempt,last_error=last_semantic_error)
+                kql = generate_kql(decision.query_goal,retry_count=attempt,last_error=last_semantic_error, last_kql=last_kql)
 
                 if not kql:
                     # If LLM returns nothing, force a retry with a generic error
                     raise ValueError("LLM generated empty or invalid KQL syntax.")
-
+                last_kql = kql
                 # -----------------------
                 # Step 3: MCP Validation (Guardrails)
                 # -----------------------

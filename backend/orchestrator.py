@@ -3,6 +3,7 @@
 import requests
 import logging
 import json
+import time
 from backend.schemas import ToolDecision
 from backend.config import OLLAMA_CHAT_URL, MODEL
 
@@ -148,25 +149,44 @@ def llm_decider(user_input: str) -> ToolDecision:
     """
     SAFE orchestrator LLM call using Structured Outputs.
     """
+    
+    start_time = time.time()
+    # [LOGGING] Step 1: Entry
+    logger.info(f"🏁 [ORCHESTRATOR] START | User Input: '{user_input}'")
 
     try:
+        payload = {
+            "model": MODEL,
+            "messages": [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": user_input}
+            ],
+            "stream": False,
+            "format": RESPONSE_SCHEMA,
+            "options": {
+                "temperature": 0.0
+            }
+        }
+
+        # [LOGGING] Step 2: Request Preparation
+        logger.info(f"🚀 [ORCHESTRATOR] Sending POST to {OLLAMA_CHAT_URL}...")
+        logger.debug(f"🔍 [ORCHESTRATOR] Payload Payload (truncated): {str(payload)[:200]}...") 
+
         response = requests.post(
             OLLAMA_CHAT_URL,
-            json={
-                "model": MODEL,
-                "messages": [
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": user_input}
-                ],
-                "stream": False,
-                "format": RESPONSE_SCHEMA,  # 👈 THIS IS THE KEY CHANGE
-                "options": {
-                    "temperature": 0.0  # Deterministic output
-                }
-            },
+            json=payload,
             timeout=120
         )
 
+        
+        duration = round(time.time() - start_time, 2)
+        # [LOGGING] Step 3: Raw Response Status
+        logger.info(f"📥 [ORCHESTRATOR] Response Received | Status: {response.status_code} | Time: {duration}s")
+        
+        if response.status_code != 200:
+            logger.error(f"❌ [ORCHESTRATOR] API Error: {response.text}")
+            return ToolDecision(tool="out_of_scope", query_goal="")
+        
         data = response.json()
 
         # 🔒 SAFETY: Check for API errors or missing content
@@ -182,12 +202,29 @@ def llm_decider(user_input: str) -> ToolDecision:
 
         parsed = json.loads(raw_text)
 
+        # [LOGGING] Step 6: Final Decision Logic
+        tool_choice = parsed.get("tool", "UNKNOWN")
+        goal = parsed.get("query_goal", "N/A")
+        
+        logger.info(f"✅ [ORCHESTRATOR] DECISION: Tool=[{tool_choice}] | Goal=[{goal}]")
+
         return ToolDecision(
-            tool=parsed["tool"],
-            query_goal=parsed["query_goal"]
+            tool=tool_choice,
+            query_goal=goal
         )
+        
+        
+    except json.JSONDecodeError as je:
+        # [LOGGING] Specific Error for Bad JSON
+        logger.error(f"❌ [ORCHESTRATOR] JSON Parse Error: {je} | Raw Text was: {raw_text if 'raw_text' in locals() else 'Unknown'}")
+        return ToolDecision(tool="out_of_scope", query_goal="")
+
+    except requests.exceptions.Timeout:
+        # [LOGGING] Specific Error for Timeout
+        logger.error(f"❌ [ORCHESTRATOR] Timeout connecting to Ollama ({OLLAMA_CHAT_URL})")
+        return ToolDecision(tool="out_of_scope", query_goal="")
 
     except Exception as e:
-        # 🔒 HARD FAILSAFE
-        logger.error(f"❌ [ORCHESTRATOR ERROR]: {str(e)}", exc_info=True)
+        # [LOGGING] Generic Hard Failure
+        logger.error(f"❌ [ORCHESTRATOR] CRITICAL FAILURE: {str(e)}", exc_info=True)
         return ToolDecision(tool="out_of_scope", query_goal="")
