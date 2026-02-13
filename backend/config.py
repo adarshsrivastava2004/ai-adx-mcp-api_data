@@ -13,7 +13,7 @@ if not load_dotenv():
 
 
 # --- MISSING VARIABLE ADDED HERE ---
-MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:7b")  #
+MODEL = os.getenv("OLLAMA_MODEL", "qwen3:4b")  #
 # -----------------------------------
 
 # ADX Settings

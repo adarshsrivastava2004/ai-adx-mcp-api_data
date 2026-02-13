@@ -70,7 +70,7 @@ async def chat(req: ChatRequest):
     if decision.tool == "out_of_scope":
         return {
             "reply": (
-                "This question is outside that scope."
+                "This topic extends far beyond what we’re covering here. Exploring it would involve a broader context and deeper evaluation. Let’s stay aligned with the current objectives."
             )
         }
         
